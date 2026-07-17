@@ -26,13 +26,17 @@ export class ChangePassComponent {
   ) {}
 
   changePassword(): void {
+    this.oldPass = this.oldPass?.trim() ?? '';
+    this.newPass = this.newPass?.trim() ?? '';
+    this.confirmPass = this.confirmPass?.trim() ?? '';
+
     if (!this.oldPass || !this.newPass || !this.confirmPass) {
       this.error = 'Complete todos los campos';
       return;
     }
 
     if (this.newPass !== this.confirmPass) {
-      this.error = 'Las contraseñas nuevas no coinciden';
+      this.error = 'El campo de "Nueva Clave" y "Confirmar Nueva Clave" no son iguales';
       return;
     }
 
@@ -42,17 +46,31 @@ export class ChangePassComponent {
 
     this.authService.changePass(this.oldPass, this.newPass, this.confirmPass).subscribe({
       next: (response) => {
+        this.loading = false;
+
         if (response.status === 200) {
-          this.success = 'Contraseña actualizada correctamente';
-          setTimeout(() => this.router.navigate(['/']), 2000);
+          this.success = response.msg || 'Contraseña actualizada correctamente';
+          // Paridad AS-IS: el viejo limpia localStorage tras cambio exitoso.
+          setTimeout(() => {
+            localStorage.removeItem('jwtOken');
+            localStorage.removeItem('usuario');
+            localStorage.removeItem('sistema');
+            this.router.navigate(['/login']);
+          }, 2000);
         } else {
           this.error = response.msg || 'Error al cambiar contraseña';
         }
-        this.loading = false;
       },
       error: (err) => {
-        this.error = err.error?.message || 'Error de conexión';
         this.loading = false;
+
+        // El backend devuelve { status, response, msg } con HTTP 403/500.
+        if (err.status === 403) {
+          this.error = err.error?.msg || 'Clave Actual Erronea';
+          this.oldPass = '';
+        } else {
+          this.error = err.error?.msg || err.error?.message || 'Error de conexión';
+        }
       }
     });
   }

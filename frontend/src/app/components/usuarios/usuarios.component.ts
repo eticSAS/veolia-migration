@@ -29,6 +29,7 @@ export class UsuariosComponent implements OnInit {
   apellido = '';
   correo = '';
   password = '';
+  confirmPassword = '';
   estado = 1;
 
   constructor(
@@ -67,11 +68,30 @@ export class UsuariosComponent implements OnInit {
     this.selectedUsuario = usuario;
     this.isEditing = true;
     this.showForm = true;
+
+    // Paridad AS-IS: el viejo recarga el usuario por ID antes de editar.
+    if (usuario.SISU_ID) {
+      this.authService.getUserbyId(usuario.SISU_ID).subscribe({
+        next: (resultado: Usuario[]) => {
+          const usr = resultado.length > 0 ? resultado[0] : usuario;
+          this.populateForm(usr);
+        },
+        error: () => {
+          this.populateForm(usuario);
+        }
+      });
+    } else {
+      this.populateForm(usuario);
+    }
+  }
+
+  private populateForm(usuario: Usuario): void {
     this.nombre = usuario.SISU_NOMBRE || '';
     this.apellido = usuario.SISU_APELLIDO || '';
     this.correo = usuario.SISU_CORREO || '';
-    this.estado = usuario.SISU_ESTADO || 1;
+    this.estado = usuario.SISU_ESTADO ?? 1;
     this.password = '';
+    this.confirmPassword = '';
   }
 
   closeForm(): void {
@@ -85,6 +105,7 @@ export class UsuariosComponent implements OnInit {
     this.apellido = '';
     this.correo = '';
     this.password = '';
+    this.confirmPassword = '';
     this.estado = 1;
     this.error = '';
     this.success = '';
@@ -94,6 +115,17 @@ export class UsuariosComponent implements OnInit {
     if (!this.nombre || !this.apellido || !this.correo) {
       this.error = 'Complete los campos obligatorios';
       return;
+    }
+
+    if (!this.isEditing) {
+      if (!this.password || !this.confirmPassword) {
+        this.error = 'La contraseña y la confirmación son obligatorias';
+        return;
+      }
+      if (this.password !== this.confirmPassword) {
+        this.error = 'La clave y la confirmación no son iguales';
+        return;
+      }
     }
 
     this.loading = true;

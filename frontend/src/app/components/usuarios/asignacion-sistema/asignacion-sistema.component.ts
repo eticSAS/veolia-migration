@@ -13,10 +13,8 @@ import { AuthService, Sistema } from '../../../services/auth.service';
 })
 export class AsignacionSistemaComponent implements OnInit {
   correo = '';
-  asignados: Sistema[] = [];
-  sinAsignar: Sistema[] = [];
-  selectedAsignados: number[] = [];
-  selectedSinAsignar: number[] = [];
+  sisuId: number | null = null;
+  listaSistema: Sistema[][] = [];
   loading = false;
   error = '';
   success = '';
@@ -29,6 +27,7 @@ export class AsignacionSistemaComponent implements OnInit {
   ngOnInit(): void {}
 
   buscarSistemas(): void {
+    this.correo = this.correo?.trim() ?? '';
     if (!this.correo) {
       this.error = 'Ingrese un correo';
       return;
@@ -36,12 +35,17 @@ export class AsignacionSistemaComponent implements OnInit {
 
     this.loading = true;
     this.error = '';
+    this.success = '';
+    this.sisuId = null;
+    this.listaSistema = [];
+
     this.authService.getSistemasPorUsuario(this.correo).subscribe({
       next: (response: any) => {
-        this.asignados = response.asignados || [];
-        this.sinAsignar = response.sinAsignar || [];
-        this.selectedAsignados = [];
-        this.selectedSinAsignar = [];
+        // Paridad AS-IS: PickList espera [source, target] = [sinAsignar, asignados].
+        this.sisuId = response.sisuId ?? null;
+        const sinAsignar = (response.sinAsignar || []) as Sistema[];
+        const asignados = (response.asignados || []) as Sistema[];
+        this.listaSistema = [sinAsignar, asignados];
         this.loading = false;
         this.cdr.detectChanges();
       },
@@ -53,41 +57,22 @@ export class AsignacionSistemaComponent implements OnInit {
     });
   }
 
-  toggleAsignado(sistId: number): void {
-    const index = this.selectedAsignados.indexOf(sistId);
-    if (index > -1) {
-      this.selectedAsignados.splice(index, 1);
-    } else {
-      this.selectedAsignados.push(sistId);
-    }
-  }
-
-  toggleSinAsignar(sistId: number): void {
-    const index = this.selectedSinAsignar.indexOf(sistId);
-    if (index > -1) {
-      this.selectedSinAsignar.splice(index, 1);
-    } else {
-      this.selectedSinAsignar.push(sistId);
-    }
-  }
-
   guardar(): void {
-    // Necesitamos el sisuId, lo obtenemos del usuario logueado o del primer asignado
-    const sisuId = this.getSisuId();
-    if (!sisuId) {
-      this.error = 'No se pudo determinar el usuario';
-      return;
-    }
+    if (!this.sisuId || this.listaSistema.length < 2) return;
 
     this.loading = true;
     this.error = '';
     this.success = '';
 
-    this.authService.asignarSistema(sisuId, this.selectedSinAsignar, this.selectedAsignados).subscribe({
+    // Paridad AS-IS: source = sinAsignar -> noAsignados; target = asignados -> asignados.
+    const noAsignados = this.listaSistema[0].map(s => s.SIST_ID);
+    const asignados = this.listaSistema[1].map(s => s.SIST_ID);
+
+    this.authService.asignarSistema(this.sisuId, asignados, noAsignados).subscribe({
       next: () => {
         this.success = 'Asignaciones guardadas correctamente';
+        this.loading = false;
         this.buscarSistemas();
-        this.cdr.detectChanges();
       },
       error: (err: any) => {
         this.error = err.error?.message || 'Error al guardar asignaciones';
@@ -95,14 +80,5 @@ export class AsignacionSistemaComponent implements OnInit {
         this.cdr.detectChanges();
       }
     });
-  }
-
-  private getSisuId(): number | null {
-    const usuario = localStorage.getItem('usuario');
-    if (usuario) {
-      const u = JSON.parse(usuario);
-      return u.SISU_ID || null;
-    }
-    return null;
   }
 }

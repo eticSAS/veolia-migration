@@ -1,6 +1,6 @@
 <div class="sistema-container">
   <div class="sistema-header">
-    <h2>Asignación de Sistemas</h2>
+    <h2>Asignación de Sistemas por Usuario</h2>
   </div>
 
   <div *ngIf="error" class="error-message">{{ error }}</div>
@@ -26,52 +26,30 @@
     ></p-button>
   </div>
 
-  <div *ngIf="asignados.length > 0 || sinAsignar.length > 0" class="sistema-columns">
-    <div class="sistema-column">
-      <h3>Asignados ({{ asignados.length }})</h3>
-      <div class="sistema-list">
-        <div
-          *ngFor="let sistema of asignados"
-          class="sistema-item"
-          [class.selected]="selectedAsignados.includes(sistema.SIST_ID)"
-          (click)="toggleAsignado(sistema.SIST_ID)"
-        >
-          <p-checkbox
-            [binary]="true"
-            [ngModel]="selectedAsignados.includes(sistema.SIST_ID)"
-            (click)="$event.stopPropagation()"
-            (onChange)="toggleAsignado(sistema.SIST_ID)"
-          ></p-checkbox>
-          <label>{{ sistema.SIST_NOMBRE }}</label>
-        </div>
-      </div>
-    </div>
-
-    <div class="sistema-column">
-      <h3>Sin Asignar ({{ sinAsignar.length }})</h3>
-      <div class="sistema-list">
-        <div
-          *ngFor="let sistema of sinAsignar"
-          class="sistema-item"
-          [class.selected]="selectedSinAsignar.includes(sistema.SIST_ID)"
-          (click)="toggleSinAsignar(sistema.SIST_ID)"
-        >
-          <p-checkbox
-            [binary]="true"
-            [ngModel]="selectedSinAsignar.includes(sistema.SIST_ID)"
-            (click)="$event.stopPropagation()"
-            (onChange)="toggleSinAsignar(sistema.SIST_ID)"
-          ></p-checkbox>
-          <label>{{ sistema.SIST_NOMBRE }}</label>
-        </div>
-      </div>
-    </div>
+  <div *ngIf="sisuId" class="picklist-container">
+    <p-pickList
+      [source]="listaSistema[0]"
+      [target]="listaSistema[1]"
+      sourceHeader="SISTEMA SIN ASIGNAR"
+      targetHeader="SISTEMA ASIGNADAS"
+      [dragdrop]="true"
+      [responsive]="true"
+      [sourceStyle]="{height: '400px'}"
+      [targetStyle]="{height: '400px'}"
+      [showSourceControls]="false"
+      [showTargetControls]="false"
+      breakpoint="1400px"
+    >
+      <ng-template let-sistema pTemplate="item">
+        <div>{{ sistema.SIST_NOMBRE }}</div>
+      </ng-template>
+    </p-pickList>
   </div>
 
   <p-button
-    *ngIf="asignados.length > 0 || sinAsignar.length > 0"
+    *ngIf="sisuId"
     icon="pi pi-save"
-    label="{{ loading ? 'Guardando...' : 'Guardar Asignaciones' }}"
+    label="{{ loading ? 'Guardando...' : 'Actualizar Asignación de Sistema' }}"
     [loading]="loading"
     (click)="guardar()"
     styleClass="w-full"

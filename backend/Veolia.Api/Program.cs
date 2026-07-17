@@ -64,6 +64,7 @@ app.UseCors("FrontendPolicy");
 var authAnonymousRoutes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
 {
     "/api/v1/auth/login",
+        "/api/v1/auth/registro",
     "/api/v1/auth/getSistemasByCorreo",
     "/api/v1/auth/getSistemasPorUsuario",
     "/api/v1/auth/asignarSistema",

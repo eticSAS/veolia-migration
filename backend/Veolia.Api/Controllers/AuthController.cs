@@ -222,8 +222,8 @@ public class AuthController(IAuthRepository authRepository, AuthContractMapper c
     [HttpPost("getSistemasPorUsuario")]
     public async Task<IActionResult> GetSistemasPorUsuario([FromBody] GetSistemasPorUsuarioRequest request, CancellationToken cancellationToken)
     {
-        var (asignados, sinAsignar) = await authRepository.GetSistemasPorUsuarioAsync(request.correo, cancellationToken);
-        return Ok(contractMapper.MapSistemasPorUsuario(asignados, sinAsignar));
+        var (sisuId, asignados, sinAsignar) = await authRepository.GetSistemasPorUsuarioAsync(request.correo, cancellationToken);
+        return Ok(new { sisuId, asignados, sinAsignar });
     }
 
     [HttpPost("asignarSistema")]
@@ -262,5 +262,6 @@ public sealed record IdRequest(long id);
 public sealed record SetApsxUsuarioRequest(long id, IReadOnlyList<long> outAps, IReadOnlyList<long> inAps);
 public sealed record GetSistemasPorUsuarioRequest(string correo);
 public sealed record AsignarSistemaRequest(long sisuId, IReadOnlyList<long> asignados, IReadOnlyList<long> noAsignados);
+public sealed record GetGeneralMenuTreeRequest(int idSistema);
 public sealed record GetMenuByUserRequest(int idSistema, long sisuId);
 public sealed record UptUserMenuRequest(long id, IReadOnlyList<long> options, int sistema);

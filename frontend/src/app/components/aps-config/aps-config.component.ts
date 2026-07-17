@@ -86,7 +86,7 @@ export class ApsConfigComponent implements OnInit {
 
   toggleEstado(item: ApsConfigItem): void {
     const nuevoEstado = item.APSA_ESTADO === 1 ? 0 : 1;
-    this.apsService.cambiarEstado(item.APSA_ID, nuevoEstado).subscribe({
+    this.apsService.cambiarEstado(item, nuevoEstado).subscribe({
       next: () => {
         item.APSA_ESTADO = nuevoEstado;
         this.cdr.detectChanges();

@@ -190,8 +190,9 @@ internal sealed class StubAuthRepository : IAuthRepository
         return Task.FromResult<object?>(null);
     }
 
-    public Task<(IReadOnlyList<object> Asignados, IReadOnlyList<object> SinAsignar)> GetSistemasPorUsuarioAsync(string correo, CancellationToken cancellationToken)
-        => Task.FromResult<(IReadOnlyList<object>, IReadOnlyList<object>)>((
+    public Task<(long SisuId, IReadOnlyList<object> Asignados, IReadOnlyList<object> SinAsignar)> GetSistemasPorUsuarioAsync(string correo, CancellationToken cancellationToken)
+        => Task.FromResult<(long, IReadOnlyList<object>, IReadOnlyList<object>)>((
+            1,
             [new Dictionary<string, object> { ["SIST_ID"] = 10, ["SIST_NOMBRE"] = "Operaciones" }],
             [new Dictionary<string, object> { ["SIST_ID"] = 20, ["SIST_NOMBRE"] = "Finanzas" }]
         ));
@@ -269,7 +270,7 @@ internal sealed class StubApsRepository : IApsRepository
         return Task.FromResult<IReadOnlyList<object>>(row is null ? [] : [row]);
     }
 
-    public Task<object?> CrearAsync(string nombre, int? idsui, int? resolucion, int propio, int relleno, int estado, int iat, CancellationToken cancellationToken)
+    public Task<object?> CrearAsync(string nombre, int? idsui, int? resolucion, int propio, int relleno, int estado, int iat, long usuario, CancellationToken cancellationToken)
     {
         if (string.Equals(nombre, "__SQL_ERROR__", StringComparison.Ordinal))
         {

@@ -53,6 +53,17 @@
   margin: 12px 0 18px;
 }
 
+.check-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.check-item label {
+  cursor: pointer;
+  user-select: none;
+}
+
 .btn-save {
   border: 0;
   border-radius: 8px;

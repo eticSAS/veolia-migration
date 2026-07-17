@@ -65,7 +65,7 @@ export class MenuxUsuarioComponent implements OnInit {
     this.error = '';
 
     // Cargar árbol general
-    this.authService.getGeneralMenuTree().subscribe({
+    this.authService.getGeneralMenuTree(this.selectedSistemaId!).subscribe({
       next: (tree: any[]) => {
         this.menuTree = tree;
         this.cdr.detectChanges();
@@ -92,16 +92,63 @@ export class MenuxUsuarioComponent implements OnInit {
   }
 
   toggleMenuItem(menuId: number): void {
-    const index = this.selectedMenuIds.indexOf(menuId);
-    if (index > -1) {
-      this.selectedMenuIds.splice(index, 1);
+    const ids = this.collectDescendantIds(menuId);
+    if (ids.length === 0) {
+      ids.push(menuId);
+    }
+
+    const allSelected = ids.every(id => this.selectedMenuIds.includes(id));
+    if (allSelected) {
+      this.selectedMenuIds = this.selectedMenuIds.filter(id => !ids.includes(id));
     } else {
-      this.selectedMenuIds.push(menuId);
+      for (const id of ids) {
+        if (!this.selectedMenuIds.includes(id)) {
+          this.selectedMenuIds.push(id);
+        }
+      }
     }
   }
 
   isSelected(menuId: number): boolean {
-    return this.selectedMenuIds.includes(menuId);
+    const ids = this.collectDescendantIds(menuId);
+    if (ids.length === 0) {
+      return this.selectedMenuIds.includes(menuId);
+    }
+    return ids.every(id => this.selectedMenuIds.includes(id));
+  }
+
+  private collectDescendantIds(menuId: number): number[] {
+    const item = this.findMenuItem(this.menuTree, menuId);
+    if (!item || !item.children || item.children.length === 0) {
+      return [];
+    }
+    const ids: number[] = [];
+    this.collectIds(item.children, ids);
+    return ids;
+  }
+
+  private collectIds(items: any[], ids: number[]): void {
+    for (const item of items) {
+      ids.push(item.id);
+      if (item.children && item.children.length > 0) {
+        this.collectIds(item.children, ids);
+      }
+    }
+  }
+
+  private findMenuItem(items: any[], menuId: number): any | null {
+    for (const item of items) {
+      if (item.id === menuId) {
+        return item;
+      }
+      if (item.children && item.children.length > 0) {
+        const found = this.findMenuItem(item.children, menuId);
+        if (found) {
+          return found;
+        }
+      }
+    }
+    return null;
   }
 
   get usuarioOptions(): { label: string; value: number }[] {

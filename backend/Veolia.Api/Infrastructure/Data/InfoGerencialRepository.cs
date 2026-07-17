@@ -86,7 +86,7 @@ public sealed class InfoGerencialRepository(IOracleConnectionFactory connectionF
                    TAR.TARI_ASEO,
                    TAR.TARI_ACUE,
                    SU.SISU_ID,
-                   SU.SISU_NOMBRE
+                   SU.SISU_NOMBRES
               FROM AUCO_APSASEO APS
               INNER JOIN AUCO_TARIFAS TAR ON TAR.APSA_ID = APS.APSA_ID
               INNER JOIN AUCO_APSUSUARIOS AU ON AU.APSA_ID = APS.APSA_ID

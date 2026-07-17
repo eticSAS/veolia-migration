@@ -52,13 +52,13 @@ ORDER BY s.SIST_NOMBRE";
         const string userSql = @"
 SELECT
     SISU_ID,
-    SISU_NOMBRE,
-    SISU_APELLIDO,
+    SISU_NOMBRES AS SISU_NOMBRE,
+    SISU_APELLIDOS AS SISU_APELLIDO,
     SISU_CORREO,
+    SISU_PASS,
     SISU_ESTADO
 FROM AUGE_SISUSUARIO
 WHERE LOWER(SISU_CORREO) = LOWER(:correo)
-  AND SISU_PASSWORD = :pass
   AND SISU_ESTADO = 1";
 
         const string sistemaSql = @"
@@ -73,13 +73,21 @@ WHERE us.USUA_ID = :sisuId
   AND s.SIST_ESTADO = 1";
 
         using var connection = await OpenConnectionAsync(cancellationToken);
-        var userRow = await connection.QueryFirstOrDefaultAsync(userSql, new { correo, pass });
+        var userRow = await connection.QueryFirstOrDefaultAsync(userSql, new { correo });
         if (userRow is null)
         {
             return new LoginRepositoryResult(LoginOutcomeKind.InvalidCredentials, "Correo o contraseña inválida");
         }
 
         var user = ToDictionary(userRow);
+        user.TryGetValue("SISU_PASS", out object? storedHashObj);
+        var storedHash = storedHashObj as string;
+        if (string.IsNullOrWhiteSpace(storedHash) || !BCrypt.Net.BCrypt.Verify(pass, storedHash))
+        {
+            return new LoginRepositoryResult(LoginOutcomeKind.InvalidCredentials, "Correo o contraseña inválida");
+        }
+
+        user.Remove("SISU_PASS");
         var sisuId = ReadLong(user, "SISU_ID");
         if (sisuId <= 0)
         {
@@ -107,28 +115,12 @@ WHERE us.USUA_ID = :sisuId
     {
         using var connection = await OpenConnectionAsync(cancellationToken);
 
-        var rowsAffected = 0;
-        var attemptedSql = new[]
-        {
-            "INSERT INTO AUGE_DEADTOKEN (DETO_ID, SISU_ID, TOKEN, DETO_FECHA) VALUES (SAUGE_DEADTOKEN.NEXTVAL, :sisuId, :token, SYSDATE)",
-            "INSERT INTO AUGE_DEADTOKEN (DEAD_ID, SISU_ID, TOKEN, DEAD_FECHA) VALUES (SAUGE_DEADTOKEN.NEXTVAL, :sisuId, :token, SYSDATE)",
-            "INSERT INTO AUGE_DEADTOKEN (TOKEN, SISU_ID) VALUES (:token, :sisuId)",
-            "INSERT INTO AUGE_DEADTOKEN (TOKEN) VALUES (:token)"
-        };
+        // AS-IS parity with legacy auth/controller.js:
+        // INSERT INTO AUGE_DEADTOKEN VALUES (SAUGE_DEADTOKEN.NEXTVAL, :token, :usuario, sysdate)
+        const string sql = "INSERT INTO AUGE_DEADTOKEN VALUES (SAUGE_DEADTOKEN.NEXTVAL, :token, :sisuId, SYSDATE)";
 
-        foreach (var sql in attemptedSql)
-        {
-            try
-            {
-                rowsAffected = await connection.ExecuteAsync(
-                    new CommandDefinition(sql, new { sisuId, token }, cancellationToken: cancellationToken));
-                break;
-            }
-            catch
-            {
-                // AS-IS compatibility fallback: legacy schemas differ per environment.
-            }
-        }
+        var rowsAffected = await connection.ExecuteAsync(
+            new CommandDefinition(sql, new { token, sisuId }, cancellationToken: cancellationToken));
 
         return new { rowsAffected };
     }
@@ -180,13 +172,14 @@ WHERE SISU_ID = :sisuId
                 return (403, "Usuario no encontrado", "Usuario no encontrado");
             }
 
-            if (!string.Equals(currentPass, oldPass, StringComparison.Ordinal))
+            if (!BCrypt.Net.BCrypt.Verify(oldPass, currentPass))
             {
                 return (403, "Contraseña actual inválida", "Contraseña actual inválida");
             }
 
+            var hashedNewPass = BCrypt.Net.BCrypt.HashPassword(newPass, workFactor: 10);
             var rowsAffected = await connection.ExecuteAsync(
-                new CommandDefinition(updateSql, new { newPass, sisuId }, cancellationToken: cancellationToken));
+                new CommandDefinition(updateSql, new { newPass = hashedNewPass, sisuId }, cancellationToken: cancellationToken));
 
             if (rowsAffected <= 0)
             {
@@ -206,12 +199,12 @@ WHERE SISU_ID = :sisuId
         const string sql = @"
 SELECT
     SISU_ID,
-    SISU_NOMBRE,
-    SISU_APELLIDO,
+    SISU_NOMBRES AS SISU_NOMBRE,
+    SISU_APELLIDOS AS SISU_APELLIDO,
     SISU_CORREO,
     SISU_ESTADO
 FROM AUGE_SISUSUARIO
-ORDER BY SISU_ID";
+ORDER BY SISU_APELLIDOS, SISU_NOMBRES, SISU_ID";
 
         using var connection = await OpenConnectionAsync(cancellationToken);
         var rows = await connection.QueryAsync(sql);
@@ -228,8 +221,8 @@ ORDER BY SISU_ID";
         const string sql = @"
 INSERT INTO AUGE_SISUSUARIO (
     SISU_ID,
-    SISU_NOMBRE,
-    SISU_APELLIDO,
+    SISU_NOMBRES,
+    SISU_APELLIDOS,
     SISU_CORREO,
     SISU_PASS,
     SISU_ESTADO,
@@ -246,8 +239,9 @@ VALUES (
 )";
 
         using var connection = await OpenConnectionAsync(cancellationToken);
+        var hashedPassword = BCrypt.Net.BCrypt.HashPassword(password, workFactor: 10);
         var rowsAffected = await connection.ExecuteAsync(
-            new CommandDefinition(sql, new { nombre, apellido, correo, password, estado }, cancellationToken: cancellationToken));
+            new CommandDefinition(sql, new { nombre, apellido, correo, password = hashedPassword, estado }, cancellationToken: cancellationToken));
 
         return new UserMutationRepositoryResult(false, new { rowsAffected });
     }
@@ -261,8 +255,8 @@ VALUES (
 
         const string sql = @"
 UPDATE AUGE_SISUSUARIO
-SET SISU_NOMBRE = :nombre,
-    SISU_APELLIDO = :apellido,
+SET SISU_NOMBRES = :nombre,
+    SISU_APELLIDOS = :apellido,
     SISU_CORREO = :correo,
     SISU_ESTADO = :estado
 WHERE SISU_ID = :id";
@@ -279,8 +273,8 @@ WHERE SISU_ID = :id";
         const string sql = @"
 SELECT
     SISU_ID,
-    SISU_NOMBRE,
-    SISU_APELLIDO,
+    SISU_NOMBRES AS SISU_NOMBRE,
+    SISU_APELLIDOS AS SISU_APELLIDO,
     SISU_CORREO,
     SISU_ESTADO
 FROM AUGE_SISUSUARIO
@@ -299,10 +293,11 @@ SET SISU_PASS = :newPass
 WHERE SISU_ID = :id";
 
         var newPass = GeneratePassword();
+        var hashedNewPass = BCrypt.Net.BCrypt.HashPassword(newPass, workFactor: 10);
 
         using var connection = await OpenConnectionAsync(cancellationToken);
         await connection.ExecuteAsync(
-            new CommandDefinition(sql, new { id, newPass }, cancellationToken: cancellationToken));
+            new CommandDefinition(sql, new { id, newPass = hashedNewPass }, cancellationToken: cancellationToken));
 
         return newPass;
     }
@@ -383,7 +378,7 @@ WHEN NOT MATCHED THEN
         return null;
     }
 
-    public async Task<(IReadOnlyList<object> Asignados, IReadOnlyList<object> SinAsignar)> GetSistemasPorUsuarioAsync(string correo, CancellationToken cancellationToken)
+    public async Task<(long SisuId, IReadOnlyList<object> Asignados, IReadOnlyList<object> SinAsignar)> GetSistemasPorUsuarioAsync(string correo, CancellationToken cancellationToken)
     {
         const string usuarioSql = @"
 SELECT SISU_ID
@@ -422,13 +417,14 @@ ORDER BY s.SIST_NOMBRE";
         var sisuId = await connection.QueryFirstOrDefaultAsync<long?>(usuarioSql, new { correo });
         if (sisuId is null)
         {
-            return (Array.Empty<object>(), Array.Empty<object>());
+            return (0L, Array.Empty<object>(), Array.Empty<object>());
         }
 
         var asignados = await connection.QueryAsync(asignadosSql, new { sisuId });
         var sinAsignar = await connection.QueryAsync(sinAsignarSql, new { sisuId });
 
         return (
+            sisuId.Value,
             asignados.Select(ToDictionaryObject).ToList(),
             sinAsignar.Select(ToDictionaryObject).ToList());
     }

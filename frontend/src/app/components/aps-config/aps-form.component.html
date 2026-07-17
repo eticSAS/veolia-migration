@@ -23,10 +23,22 @@
       </div>
 
       <div class="checks-grid">
-        <p-checkbox [(ngModel)]="propio" [binary]="true" label="Propio" name="propio"></p-checkbox>
-        <p-checkbox [(ngModel)]="relleno" [binary]="true" label="Solo relleno" name="relleno"></p-checkbox>
-        <p-checkbox [(ngModel)]="estado" [binary]="true" label="Activo" name="estado"></p-checkbox>
-        <p-checkbox [(ngModel)]="iat" [binary]="true" label="IAT" name="iat"></p-checkbox>
+        <div class="check-item">
+          <p-checkbox [(ngModel)]="propio" [binary]="true" inputId="aps-propio" name="propio"></p-checkbox>
+          <label for="aps-propio">Propio</label>
+        </div>
+        <div class="check-item">
+          <p-checkbox [(ngModel)]="relleno" [binary]="true" inputId="aps-relleno" name="relleno"></p-checkbox>
+          <label for="aps-relleno">Solo relleno</label>
+        </div>
+        <div class="check-item">
+          <p-checkbox [(ngModel)]="estado" [binary]="true" inputId="aps-estado" name="estado"></p-checkbox>
+          <label for="aps-estado">Activo</label>
+        </div>
+        <div class="check-item">
+          <p-checkbox [(ngModel)]="iat" [binary]="true" inputId="aps-iat" name="iat"></p-checkbox>
+          <label for="aps-iat">IAT</label>
+        </div>
       </div>
 
       <p-button type="submit" label="{{ loading ? 'Guardando...' : 'Guardar' }}" [loading]="loading" styleClass="w-full"></p-button>

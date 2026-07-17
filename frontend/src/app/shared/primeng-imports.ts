@@ -17,6 +17,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { TabsModule } from 'primeng/tabs';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { SkeletonModule } from 'primeng/skeleton';
+import { PickListModule } from 'primeng/picklist';
 
 export const CommonPrimeNgModules = [
   SelectModule,
@@ -29,5 +30,6 @@ export const CommonPrimeNgModules = [
   TooltipModule,
   TabsModule,
   InputNumberModule,
-  SkeletonModule
+  SkeletonModule,
+  PickListModule
 ] as const;

@@ -19,52 +19,30 @@
     ></p-select>
   </div>
 
-  <div *ngIf="selectedUsuarioId" class="aps-columns">
-    <div class="aps-column">
-      <h3>Asignadas ({{ asignadas.length }})</h3>
-      <div class="aps-list">
-        <div
-          *ngFor="let aps of asignadas"
-          class="aps-item"
-          [class.selected]="selectedAsignadas.includes(aps.APSA_ID)"
-          (click)="toggleAsignada(aps.APSA_ID)"
-        >
-          <p-checkbox
-            [binary]="true"
-            [ngModel]="selectedAsignadas.includes(aps.APSA_ID)"
-            (click)="$event.stopPropagation()"
-            (onChange)="toggleAsignada(aps.APSA_ID)"
-          ></p-checkbox>
-          <label>{{ aps.APSA_NOMAPS }}</label>
-        </div>
-      </div>
-    </div>
-
-    <div class="aps-column">
-      <h3>Sin Asignar ({{ sinAsignar.length }})</h3>
-      <div class="aps-list">
-        <div
-          *ngFor="let aps of sinAsignar"
-          class="aps-item"
-          [class.selected]="selectedSinAsignar.includes(aps.APSA_ID)"
-          (click)="toggleSinAsignar(aps.APSA_ID)"
-        >
-          <p-checkbox
-            [binary]="true"
-            [ngModel]="selectedSinAsignar.includes(aps.APSA_ID)"
-            (click)="$event.stopPropagation()"
-            (onChange)="toggleSinAsignar(aps.APSA_ID)"
-          ></p-checkbox>
-          <label>{{ aps.APSA_NOMAPS }}</label>
-        </div>
-      </div>
-    </div>
+  <div *ngIf="selectedUsuarioId" class="picklist-container">
+    <p-pickList
+      [source]="listaAps[0]"
+      [target]="listaAps[1]"
+      sourceHeader="APS SIN ASIGNAR"
+      targetHeader="APS ASIGNADAS"
+      [dragdrop]="true"
+      [responsive]="true"
+      [sourceStyle]="{height: '400px'}"
+      [targetStyle]="{height: '400px'}"
+      [showSourceControls]="false"
+      [showTargetControls]="false"
+      breakpoint="1400px"
+    >
+      <ng-template let-aps pTemplate="item">
+        <div>{{ aps.APSA_NOMAPS }}</div>
+      </ng-template>
+    </p-pickList>
   </div>
 
   <p-button
     *ngIf="selectedUsuarioId"
     icon="pi pi-save"
-    label="{{ loading ? 'Guardando...' : 'Guardar Asignaciones' }}"
+    label="{{ loading ? 'Guardando...' : 'Actualizar Asignación de APS' }}"
     [loading]="loading"
     (click)="guardar()"
     styleClass="w-full"

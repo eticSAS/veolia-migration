@@ -3,6 +3,7 @@ import { Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { forkJoin } from 'rxjs';
 import { AuthService, MenuPermission } from '../../services/auth.service';
+import { AuthState } from '../../state/auth.state';
 import { ProfileComponent } from './profile/profile.component';
 
 interface MenuNode {
@@ -120,6 +121,7 @@ export class LayoutComponent implements OnInit {
 
   constructor(
     private authService: AuthService,
+    private authState: AuthState,
     private router: Router,
     private cdr: ChangeDetectorRef
   ) {}
@@ -129,13 +131,20 @@ export class LayoutComponent implements OnInit {
     if (usuarioStr) {
       this.usuario = JSON.parse(usuarioStr);
     }
+    this.authState.hydrate();
     this.loadMenu();
   }
 
   loadMenu(): void {
+    const idSistema = this.authState.sistemaId();
+    if (!idSistema) {
+      this.menuGroups = [];
+      return;
+    }
+
     forkJoin({
       permissions: this.authService.getUserMenu(),
-      menuTree: this.authService.getGeneralMenuTree()
+      menuTree: this.authService.getGeneralMenuTree(idSistema)
     }).subscribe({
       next: ({ permissions, menuTree }: { permissions: MenuPermission[]; menuTree: any[] }) => {
         const permittedMenuIds = new Set((permissions || []).map((item) => item.MENU_ID));

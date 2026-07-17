@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { environment } from '../../environments/environment';
-import { Observable, tap } from 'rxjs';
+import { Observable, tap, catchError, throwError } from 'rxjs';
 import { AuthState } from '../state';
 
 export interface LoginRequest {
@@ -77,7 +77,7 @@ export class AuthService {
   login(request: LoginRequest): Observable<LoginResponse> {
     this.authState.setLoading(true);
     this.authState.setError(null);
-    
+
     return this.http.post<LoginResponse>(`${this.baseUrl}/login`, request).pipe(
       tap(response => {
         this.authState.setLoading(false);
@@ -86,13 +86,18 @@ export class AuthService {
           this.authState.setUser(response.usuario);
           this.authState.setSistema(response.sistema);
         }
+      }),
+      catchError(err => {
+        this.authState.setLoading(false);
+        this.authState.setError(err.error?.message || 'Error de conexión');
+        return throwError(() => err);
       })
     );
   }
 
   // F-AUTH-02: Logout
   logout(token: string): Observable<any> {
-    return this.http.post(`${this.baseUrl}/logout`, { token }, {
+    return this.http.post(`${this.baseUrl}/logout`, {}, {
       headers: new HttpHeaders({
         'Content-Type': 'application/json',
         'x-access-token': token
@@ -156,8 +161,8 @@ export class AuthService {
     return this.http.get<Sistema[]>(`${this.baseUrl}/allSistemas`);
   }
 
-  getGeneralMenuTree(): Observable<any[]> {
-    return this.http.post<any[]>(`${this.baseUrl}/getGeneralMenuTree`, {}, { headers: this.getHeaders() });
+  getGeneralMenuTree(idSistema: number): Observable<any[]> {
+    return this.http.post<any[]>(`${this.baseUrl}/getGeneralMenuTree`, { idSistema }, { headers: this.getHeaders() });
   }
 
   getMenuByUser(idSistema: number, sisuId: number): Observable<number[]> {

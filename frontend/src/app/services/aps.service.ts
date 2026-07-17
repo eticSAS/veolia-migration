@@ -66,15 +66,15 @@ export class ApsService {
     return this.http.delete(`${this.baseUrl}/eliminar/${id}`, { headers: this.getHeaders() });
   }
 
-  cambiarEstado(id: number, estado: number): Observable<any> {
-    return this.http.put(`${this.baseUrl}/editar/${id}`, {
-      nombre: '',
-      idsui: null,
-      resolucion: null,
-      propio: 0,
-      relleno: 0,
+  cambiarEstado(item: ApsConfigItem, estado: number): Observable<any> {
+    return this.http.put(`${this.baseUrl}/editar/${item.APSA_ID}`, {
+      nombre: item.APSA_NOMAPS,
+      idsui: item.APSA_IDSUI ?? null,
+      resolucion: item.APSA_RESOLUCION ?? null,
+      propio: item.APSA_PROPIO ?? 0,
+      relleno: item.APSA_SOLORELL ?? 0,
       estado,
-      iat: 0
+      iat: item.APSA_VIAT ?? 0
     }, { headers: this.getHeaders() });
   }
 }

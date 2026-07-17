@@ -7,7 +7,10 @@ namespace Veolia.Api.Controllers;
 
 [ApiController]
 [Route("api/v1/aps")]
-public sealed class ApsController(IApsRepository apsRepository, ApsContractMapper contractMapper) : ControllerBase
+public sealed class ApsController(
+    IApsRepository apsRepository,
+    ApsContractMapper contractMapper,
+    ILogger<ApsController> logger) : ControllerBase
 {
     [HttpPost("consultageneral")]
     public async Task<IActionResult> ConsultaGeneral(CancellationToken cancellationToken)
@@ -17,8 +20,9 @@ public sealed class ApsController(IApsRepository apsRepository, ApsContractMappe
             var data = await apsRepository.ConsultaGeneralAsync(cancellationToken);
             return Ok(data);
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Error en Aps.ConsultaGeneral");
             return StatusCode(StatusCodes.Status500InternalServerError, contractMapper.MapLegacyError());
         }
     }
@@ -31,8 +35,9 @@ public sealed class ApsController(IApsRepository apsRepository, ApsContractMappe
             var data = await apsRepository.ConsultaApsAsync(request.aps, cancellationToken);
             return Ok(data);
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Error en Aps.ConsultaAps para aps {Aps}", request.aps);
             return StatusCode(StatusCodes.Status500InternalServerError, contractMapper.MapLegacyError());
         }
     }
@@ -40,6 +45,9 @@ public sealed class ApsController(IApsRepository apsRepository, ApsContractMappe
     [HttpPost("crear")]
     public async Task<IActionResult> Crear([FromBody] ApsMutationRequest request, CancellationToken cancellationToken)
     {
+        if (!TryReadTokenContext(out var tokenContext))
+            return Unauthorized(new { message = "No Autorizado!" });
+
         try
         {
             var result = await apsRepository.CrearAsync(
@@ -50,12 +58,14 @@ public sealed class ApsController(IApsRepository apsRepository, ApsContractMappe
                 request.relleno,
                 request.estado,
                 request.iat,
+                tokenContext.SisuId,
                 cancellationToken);
 
             return Ok(contractMapper.MapMutationResponse(result));
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Error en Aps.Crear para nombre {Nombre}", request.nombre);
             return StatusCode(StatusCodes.Status500InternalServerError, contractMapper.MapLegacyError());
         }
     }
@@ -78,8 +88,9 @@ public sealed class ApsController(IApsRepository apsRepository, ApsContractMappe
 
             return Ok(contractMapper.MapMutationResponse(result));
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Error en Aps.Editar para id {Id}", id);
             return StatusCode(StatusCodes.Status500InternalServerError, contractMapper.MapLegacyError());
         }
     }
@@ -97,8 +108,9 @@ public sealed class ApsController(IApsRepository apsRepository, ApsContractMappe
             var data = await apsRepository.GetApsByUsuarioAsync(tokenContext.SisuId, cancellationToken);
             return Ok(data);
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Error en Aps.GetApsByUsuario para usuario {SisuId}", tokenContext.SisuId);
             return StatusCode(StatusCodes.Status500InternalServerError, contractMapper.MapLegacyError());
         }
     }
@@ -111,8 +123,9 @@ public sealed class ApsController(IApsRepository apsRepository, ApsContractMappe
             var data = await apsRepository.GetUsuarioPorApsAsync(request.aps, cancellationToken);
             return Ok(data);
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Error en Aps.UsuarioPorAps para aps {Aps}", request.aps);
             return StatusCode(StatusCodes.Status500InternalServerError, contractMapper.MapLegacyError());
         }
     }
@@ -130,6 +143,7 @@ public sealed class ApsController(IApsRepository apsRepository, ApsContractMappe
         }
         catch (Exception ex)
         {
+            logger.LogError(ex, "Error en Aps.Eliminar para id {Id}", id);
             return StatusCode(StatusCodes.Status500InternalServerError, contractMapper.MapLegacyError());
         }
     }

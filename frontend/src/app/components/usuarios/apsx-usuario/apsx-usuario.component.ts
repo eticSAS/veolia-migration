@@ -14,10 +14,7 @@ import { AuthService, ApsItem } from '../../../services/auth.service';
 export class ApsxUsuarioComponent implements OnInit {
   usuarios: any[] = [];
   selectedUsuarioId: number | null = null;
-  asignadas: ApsItem[] = [];
-  sinAsignar: ApsItem[] = [];
-  selectedAsignadas: number[] = [];
-  selectedSinAsignar: number[] = [];
+  listaAps: ApsItem[][] = [];
   loading = false;
   error = '';
   success = '';
@@ -52,16 +49,21 @@ export class ApsxUsuarioComponent implements OnInit {
   }
 
   onUsuarioChange(): void {
-    if (!this.selectedUsuarioId) return;
-    
+    if (!this.selectedUsuarioId) {
+      this.listaAps = [];
+      return;
+    }
+
     this.loading = true;
     this.error = '';
+    this.success = '';
+
     this.authService.getApsAsignadas(this.selectedUsuarioId).subscribe({
       next: (response: any) => {
-        this.asignadas = response.asignadas || [];
-        this.sinAsignar = response.sinAsignar || [];
-        this.selectedAsignadas = [];
-        this.selectedSinAsignar = [];
+        // Paridad AS-IS: PickList espera [source, target] = [sinAsignar, asignadas].
+        const sinAsignar = (response.sinAsignar || []) as ApsItem[];
+        const asignadas = (response.asignadas || []) as ApsItem[];
+        this.listaAps = [sinAsignar, asignadas];
         this.loading = false;
         this.cdr.detectChanges();
       },
@@ -73,40 +75,22 @@ export class ApsxUsuarioComponent implements OnInit {
     });
   }
 
-  toggleAsignada(apsaId: number): void {
-    const index = this.selectedAsignadas.indexOf(apsaId);
-    if (index > -1) {
-      this.selectedAsignadas.splice(index, 1);
-    } else {
-      this.selectedAsignadas.push(apsaId);
-    }
-  }
-
-  toggleSinAsignar(apsaId: number): void {
-    const index = this.selectedSinAsignar.indexOf(apsaId);
-    if (index > -1) {
-      this.selectedSinAsignar.splice(index, 1);
-    } else {
-      this.selectedSinAsignar.push(apsaId);
-    }
-  }
-
   guardar(): void {
-    if (!this.selectedUsuarioId) return;
+    if (!this.selectedUsuarioId || this.listaAps.length < 2) return;
 
     this.loading = true;
     this.error = '';
     this.success = '';
 
-    this.authService.setApsxUsuario(
-      this.selectedUsuarioId,
-      this.selectedAsignadas,
-      this.selectedSinAsignar
-    ).subscribe({
+    // Paridad AS-IS: source = sinAsignar -> outAps; target = asignadas -> inAps.
+    const outAps = this.listaAps[0].map(a => a.APSA_ID);
+    const inAps = this.listaAps[1].map(a => a.APSA_ID);
+
+    this.authService.setApsxUsuario(this.selectedUsuarioId, outAps, inAps).subscribe({
       next: () => {
         this.success = 'Asignaciones guardadas correctamente';
+        this.loading = false;
         this.onUsuarioChange();
-        this.cdr.detectChanges();
       },
       error: (err: any) => {
         this.error = err.error?.message || 'Error al guardar asignaciones';

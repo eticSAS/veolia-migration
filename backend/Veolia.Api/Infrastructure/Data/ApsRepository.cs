@@ -53,6 +53,7 @@ WHERE APSA_ID = :apsId";
         int relleno,
         int estado,
         int iat,
+        long usuario,
         CancellationToken cancellationToken)
     {
         const string sql = @"
@@ -65,6 +66,7 @@ INSERT INTO AUCO_APSASEO (
     APSA_SOLORELL,
     APSA_ESTADO,
     APSA_VIAT,
+    USUA_USUA,
     APSA_FECHACREACION
 )
 VALUES (
@@ -76,6 +78,7 @@ VALUES (
     :relleno,
     :estado,
     :iat,
+    :usuario,
     SYSDATE
 )";
 
@@ -83,7 +86,7 @@ VALUES (
         var rowsAffected = await connection.ExecuteAsync(
             new CommandDefinition(
                 sql,
-                new { nombre, idsui, resolucion, propio, relleno, estado, iat },
+                new { nombre, idsui, resolucion, propio, relleno, estado, iat, usuario },
                 cancellationToken: cancellationToken));
 
         return new { rowsAffected };
@@ -108,8 +111,7 @@ SET APSA_NOMAPS = :nombre,
     APSA_PROPIO = :propio,
     APSA_SOLORELL = :relleno,
     APSA_ESTADO = :estado,
-    APSA_VIAT = :iat,
-    APSA_FECHACREACION = SYSDATE
+    APSA_VIAT = :iat
 WHERE APSA_ID = :id";
 
         using var connection = await OpenConnectionAsync(cancellationToken);
@@ -162,8 +164,7 @@ ORDER BY su.SISU_ID";
     {
         const string sql = @"
             UPDATE AUCO_APSASEO
-            SET APSA_ESTADO = 0,
-                APSA_FECHACREACION = SYSDATE
+            SET APSA_ESTADO = 0
             WHERE APSA_ID = :id";
 
         using var connection = await OpenConnectionAsync(cancellationToken);

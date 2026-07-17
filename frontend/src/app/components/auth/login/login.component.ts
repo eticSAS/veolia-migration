@@ -4,7 +4,6 @@ import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { CommonPrimeNgModules } from '../../../shared/primeng-imports';
 import { AuthService, Sistema } from '../../../services/auth.service';
-import { AuthState } from '../../../state';
 
 @Component({
   selector: 'app-login',
@@ -21,39 +20,52 @@ export class LoginComponent {
   error = '';
   loading = false;
 
-  // Inyección moderna
   private readonly authService = inject(AuthService);
-  private readonly authState = inject(AuthState);
   private readonly router = inject(Router);
 
-  // Exponer estado para el template (signals)
-  get authLoading() { return this.authState.loading(); }
-  get authError() { return this.authState.error(); }
+  private isValidEmail(email: string): boolean {
+    // eslint-disable-next-line no-useless-escape
+    const re = /^(([^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*)|(\".+\"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+    return re.test(email);
+  }
 
   onEmailChange(): void {
-    if (this.email.length > 3) {
-      this.authService.getSistemasByCorreo(this.email).subscribe({
-        next: (sistemas: Sistema[]) => {
-          this.sistemas = sistemas;
-          if (sistemas.length === 1) {
-            this.idSistema = sistemas[0].SIST_ID;
-          }
-        },
-        error: () => {
-          this.sistemas = [];
-        }
-      });
+    if (this.email.length < 4) {
+      this.sistemas = [];
+      this.idSistema = null;
+      return;
     }
+
+    this.authService.getSistemasByCorreo(this.email).subscribe({
+      next: (sistemas: Sistema[]) => {
+        this.sistemas = sistemas;
+        if (sistemas.length === 1) {
+          this.idSistema = sistemas[0].SIST_ID;
+        } else if (sistemas.length === 0) {
+          this.idSistema = null;
+        }
+      },
+      error: () => {
+        this.sistemas = [];
+        this.idSistema = null;
+      }
+    });
   }
 
   login(): void {
+    this.error = '';
+
     if (!this.email || !this.password || !this.idSistema) {
       this.error = 'Complete todos los campos';
       return;
     }
 
+    if (!this.isValidEmail(this.email)) {
+      this.error = 'El email no es válido';
+      return;
+    }
+
     this.loading = true;
-    this.error = '';
 
     this.authService.login({
       correo: this.email,
@@ -61,22 +73,32 @@ export class LoginComponent {
       idSistema: this.idSistema
     }).subscribe({
       next: (response: any) => {
+        this.loading = false;
+
         if (response.auth_token) {
-          // Guardar en localStorage (para persistencia)
           localStorage.setItem('jwtOken', response.auth_token);
           localStorage.setItem('usuario', JSON.stringify(response.usuario));
           localStorage.setItem('sistema', JSON.stringify(response.sistema));
-          
-          // El estado ya se actualizó en el servicio
           this.router.navigate(['/']);
         } else {
           this.error = response.message || 'Error en login';
         }
-        this.loading = false;
       },
       error: (err: any) => {
-        this.error = err.error?.message || 'Error de conexión';
         this.loading = false;
+
+        if (err.status === 401) {
+          this.error = 'Usuario o Pass Incorrecto';
+          this.password = '';
+        } else if (err.status === 404) {
+          this.error = 'Usuario no existe o inactivo';
+          this.email = '';
+          this.password = '';
+          this.sistemas = [];
+          this.idSistema = null;
+        } else {
+          this.error = err.error?.message || 'Error de conexión';
+        }
       }
     });
   }
